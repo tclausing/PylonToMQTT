@@ -19,65 +19,8 @@ Pylon::~Pylon()
 }
 
 bool Pylon::Transmit() {
-	bool sequenceComplete = false;
-    if (_numberOfPacks == 0){
-		_root.clear();
-	    send_cmd(0xFF, CommandInformation::GetPackCount);
-    }
-    else {
-		if (_currentPack < _Packs.size()) {
-			if (_Packs[_currentPack].InfoPublished() == false) {
-				if (_infoCommands[_infoCommandIndex] != CommandInformation::None){
-					send_cmd(_currentPack+1, _infoCommands[_infoCommandIndex]);
-				}
-				else {
-					if (_root.size() > 0) {
-						String s;
-						serializeJson(_root, s);
-						_root.clear();
-						char buf[64];
-						sprintf(buf, "info/Pack%d", _currentPack+1); 
-						_pcb->Publish(buf, s.c_str(), true);
-						_Packs[_currentPack].SetInfoPublished();
-					}
-				}
-				_infoCommandIndex++;
-				if (_infoCommandIndex == sizeof(_infoCommands)){
-					_infoCommandIndex = 0;
-					_currentPack++;
-					if (_currentPack == _numberOfPacks){
-						_currentPack = 0;
-						sequenceComplete = true;
-					}
-				}
-			}
-			else {
-				if (_readingsCommands[_readingsCommandIndex] != CommandInformation::None){
-					send_cmd(_currentPack+1, _readingsCommands[_readingsCommandIndex]);
-				}
-				else {
-					if (_root.size() > 0) {
-						String s;
-						serializeJson(_root, s);
-						_root.clear();
-						char buf[64];
-						sprintf(buf, "readings/Pack%d", _currentPack+1); 
-						_pcb->Publish(buf, s.c_str(), false);
-					}
-				}
-				_readingsCommandIndex++;
-				if (_readingsCommandIndex == sizeof(_readingsCommands)){
-					_readingsCommandIndex = 0;
-					_currentPack++;
-					if (_currentPack == _numberOfPacks){
-						_currentPack = 0;
-						sequenceComplete = true;
-					}
-				}
-			}
-		}
-    }
-	return sequenceComplete;
+	_pcb->Publish("hello", "world", false);
+	return true;
 }
 
 uint16_t Pylon::get_frame_checksum(char* frame){
@@ -151,12 +94,25 @@ std::vector<unsigned char> parse_string(const std::string & s)
     return result;
 }
 
+void Pylon::publish(String topic, uint16_t packNumber)
+{				
+	String s;
+	serializeJson(_root, s);
+	_root.clear();
+	char buf[64];
+	sprintf(buf, topic.c_str(), packNumber); 
+	_pcb->Publish(buf, s.c_str(), false);
+}
+
 int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cmd)
 {
 	if(readNow > 0 && szResponse[0] != '\0')
 	{
 		logd("received: %d", readNow);
 		logd("data: %s", szResponse);
+		JsonObject debug = _root.createNestedObject("debug");
+		debug["data"] = szResponse;
+		debug["cmd"] = cmd;
         std::string chksum; 
         chksum.assign(&szResponse[readNow-4]);
         std::vector<unsigned char> cs = parse_string(chksum);
@@ -169,11 +125,15 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 		if (((CHKSUM+sum) & 0xFFFF) != 0) { 
 			uint16_t c = ~sum + 1;
 			loge("Checksum failed: %04x, should be: %04X", sum, c); 
+			debug["checksum_actual"] = sum;
+			debug["checksum_expected"] = c;
+			publish("debug", 0);
 			return -1;
 		} 
         std::string frame;
         frame.assign(&szResponse[1]); // skip SOI (~)
         std::vector<unsigned char> v = parse_string(frame);
+		debug["data_string"] = v;
         int index = 0;
 		uint16_t VER = v[index++];
 		uint16_t ADR = v[index++];
@@ -184,13 +144,21 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 		uint16_t LENID = LENGTH & 0x0FFF;
 		if (readNow < (LENID + 17)) {  
 			loge("Data length error LENGTH: %04X LENID: %04X, Received: %d", LENGTH, LENID, (readNow-17));
+			debug["readnow"] = readNow;
+			debug["LENID"] = LENID;
+			publish("debug", 0);
 			return -1;
 		}
 		logd("VER: %02X, ADR: %02X, CID1: %02X, CID2: %02X, LENID: %02X (%d), CHKSUM: %02X", VER, ADR, CID1, CID2, LENID, LENID, CHKSUM);
+		debug["VER"] = VER;
+		debug["ADR"] = ADR;
 		if (CID2 != ResponseCode::Normal) {
 			loge("CID2 error code: %02X", CID2);
+			debug["CID2"] = CID2;
+			publish("debug", 0);
 			return -1;
 		}
+		// _root.clear();
 		switch (cmd) {
 			case CommandInformation::AnalogValueFixedPoint:
 			{
@@ -239,6 +207,8 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				_root["SOC"] = (remain * 100) / total;	
 				_root["Power"] = round(voltage * current);
 				// module["LAST"] = ((v[index++]<<8) | (v[index++]<<8) | v[index++]); 
+				
+				publish("readings/analog/Pack%d", packNumber);
 			}
 			break;
 			case CommandInformation::GetVersionInfo: {
@@ -247,10 +217,13 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				std::string s(v.begin(), v.end());
 				ver = s.substr(index);
 				_root["Version"] = ver.substr(0, 19);
-				int packIndex = ADR - 1;
-				if (packIndex < _Packs.size()) {
-					_Packs[packIndex].setVersionInfo(ver);
-				}
+				
+				publish("info/version/Pack%d", ADR);
+
+				// int packIndex = ADR - 1;
+				// if (packIndex < _Packs.size()) {
+				// 	_Packs[packIndex].setVersionInfo(ver);
+				// }
 			}
 			break;
 			case CommandInformation::AlarmInfo: {
@@ -339,6 +312,8 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				aso["CHG_UT"] = CheckBit(AlarmSts2, 2);
 				aso["DSG_OT"] = CheckBit(AlarmSts2, 1);
 				aso["CHG_OT"] = CheckBit(AlarmSts2, 0);
+				
+				publish("readings/alarm/Pack%d", packNumber);
 			}
 			break;
 			case CommandInformation::GetBarCode: {
@@ -347,25 +322,32 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				bc = s.substr(index);
 				logi("GetBarCode for %d bc: %s", ADR, bc.c_str());
 				_root["BarCode"] = bc.substr(0, 15);
-				int packIndex = ADR - 1;
-				if (packIndex < _Packs.size()) {
-					_Packs[packIndex].setBarcode(bc);
-				}
+				
+				publish("info/barcode/Pack%d", ADR);
+
+				// int packIndex = ADR - 1;
+				// if (packIndex < _Packs.size()) {
+				// 	_Packs[packIndex].setBarcode(bc);
+				// }
 			}
 			break;
 			case CommandInformation::GetPackCount:
 			{
-                _numberOfPacks = v[index];
-                _numberOfPacks > 8 ? 1 : _numberOfPacks; // max 8, default to 1
-				_root.clear();
-				logi("GetPackCount: %d", _numberOfPacks);
-				for (int i = 0; i < _numberOfPacks; i++) {
-					char packName[STR_LEN];
-					sprintf(packName, "Pack%d", i+1);
-					_Packs.push_back(Pack(packName, &_TempKeys, _pcb));
-				}
+                // _numberOfPacks = v[index];
+                // _numberOfPacks > 8 ? 1 : _numberOfPacks; // max 8, default to 1
+				// _root.clear();
+				// logi("GetPackCount: %d", _numberOfPacks);
+				// for (int i = 0; i < _numberOfPacks; i++) {
+				// 	char packName[STR_LEN];
+				// 	sprintf(packName, "Pack%d", i+1);
+				// 	_Packs.push_back(Pack(packName, &_TempKeys, _pcb));
+				// }
 			}
 			break;
+			default:
+			{
+				publish("debug/default", 0);
+			}
 		}
 	}
 	return 0;
