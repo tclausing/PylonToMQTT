@@ -8,7 +8,7 @@ namespace PylonToMQTT
 
 AsyncSerial::AsyncSerial()
 {
-	_status = IDDLE;
+	_status = RECEIVING_DATA;
 	_buffer = (byte*)malloc(BufferSize);
 	_bufferLength = BufferSize;
 	_bufferIndex = 0;
@@ -74,7 +74,7 @@ void AsyncSerial::Receive(int timeOut)
 		}
 	}
 	_bufferIndex = 0; // recieved, timedout or overflowed - reset for next message
-	_status = IDDLE;
+	_status = RECEIVING_DATA;
 	return;
 }
 

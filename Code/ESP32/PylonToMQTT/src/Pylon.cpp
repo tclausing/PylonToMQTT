@@ -20,6 +20,9 @@ Pylon::~Pylon()
 
 bool Pylon::Transmit() {
 	_pcb->Publish("hello", "world", false);
+	JsonObject debug = _root.createNestedObject("debug");
+	debug["hello"] = "world";
+	publish("debug/hello", 0);
 	return true;
 }
 
@@ -106,13 +109,19 @@ void Pylon::publish(String topic, uint16_t packNumber)
 
 int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cmd)
 {
+	JsonObject debug = _root.createNestedObject("debug");
+	debug["readNow"] = readNow;
+	debug["data"] = szResponse;
+	debug["cmd"] = cmd;
+	publish("debug/raw", 0);
+
 	if(readNow > 0 && szResponse[0] != '\0')
 	{
-		logd("received: %d", readNow);
-		logd("data: %s", szResponse);
 		JsonObject debug = _root.createNestedObject("debug");
 		debug["data"] = szResponse;
 		debug["cmd"] = cmd;
+		logd("received: %d", readNow);
+		logd("data: %s", szResponse);
         std::string chksum; 
         chksum.assign(&szResponse[readNow-4]);
         std::vector<unsigned char> cs = parse_string(chksum);
@@ -132,8 +141,8 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 		} 
         std::string frame;
         frame.assign(&szResponse[1]); // skip SOI (~)
+		debug["frame"] = frame;
         std::vector<unsigned char> v = parse_string(frame);
-		debug["data_string"] = v;
         int index = 0;
 		uint16_t VER = v[index++];
 		uint16_t ADR = v[index++];
@@ -350,6 +359,11 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 			}
 		}
 	}
+
+	if (_root.size()) {
+		publish("debug/return", 0);
+	}
+
 	return 0;
 }
 
