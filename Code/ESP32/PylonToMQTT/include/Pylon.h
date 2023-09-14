@@ -50,6 +50,7 @@ public:
     String convert_ASCII(char* p);
     int parseValue(char** pp, int l);
     void send_cmd(uint8_t address, CommandInformation cmd);
+    void publish(String topic, uint16_t packNumber, bool retained);
 
 private:
     std::vector<Pack> _Packs;

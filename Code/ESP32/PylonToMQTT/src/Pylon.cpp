@@ -21,25 +21,22 @@ Pylon::~Pylon()
 bool Pylon::Transmit() {
 	bool sequenceComplete = false;
     if (_numberOfPacks == 0){
-		_root.clear();
-	    send_cmd(0xFF, CommandInformation::GetPackCount);
+		// _root.clear();
+	    // send_cmd(0xFF, CommandInformation::GetPackCount);
+		
+		_numberOfPacks = 4;
+		logi("Set Pack Count: %d", _numberOfPacks);
+		for (int i = 0; i < _numberOfPacks; i++) {
+			char packName[STR_LEN];
+			sprintf(packName, "Pack%d", i+1);
+			_Packs.push_back(Pack(packName, &_TempKeys, _pcb));
+		}
     }
     else {
 		if (_currentPack < _Packs.size()) {
 			if (_Packs[_currentPack].InfoPublished() == false) {
 				if (_infoCommands[_infoCommandIndex] != CommandInformation::None){
 					send_cmd(_currentPack+1, _infoCommands[_infoCommandIndex]);
-				}
-				else {
-					if (_root.size() > 0) {
-						String s;
-						serializeJson(_root, s);
-						_root.clear();
-						char buf[64];
-						sprintf(buf, "info/Pack%d", _currentPack+1); 
-						_pcb->Publish(buf, s.c_str(), true);
-						_Packs[_currentPack].SetInfoPublished();
-					}
 				}
 				_infoCommandIndex++;
 				if (_infoCommandIndex == sizeof(_infoCommands)){
@@ -54,16 +51,6 @@ bool Pylon::Transmit() {
 			else {
 				if (_readingsCommands[_readingsCommandIndex] != CommandInformation::None){
 					send_cmd(_currentPack+1, _readingsCommands[_readingsCommandIndex]);
-				}
-				else {
-					if (_root.size() > 0) {
-						String s;
-						serializeJson(_root, s);
-						_root.clear();
-						char buf[64];
-						sprintf(buf, "readings/Pack%d", _currentPack+1); 
-						_pcb->Publish(buf, s.c_str(), false);
-					}
 				}
 				_readingsCommandIndex++;
 				if (_readingsCommandIndex == sizeof(_readingsCommands)){
@@ -119,6 +106,10 @@ void Pylon::send_cmd(uint8_t address, CommandInformation cmd) {
     sprintf(bdevid, "%02X", address);
 	encode_cmd(raw_frame, address, cmd, bdevid);
 	logd("send_cmd: %s", raw_frame);
+	JsonObject debug = _root.createNestedObject("debug");
+	debug["send_cmd"] = cmd;
+	debug["frame"] = raw_frame;
+	publish("debug/send/Pack%d", address, false);
     _asyncSerial->Send(cmd, (byte*)raw_frame, strlen(raw_frame));
 }
 
@@ -151,11 +142,25 @@ std::vector<unsigned char> parse_string(const std::string & s)
     return result;
 }
 
+void Pylon::publish(String topic, uint16_t packNumber, bool retained)
+{				
+	String s;
+	serializeJson(_root, s);
+	_root.clear();
+	char buf[64];
+	sprintf(buf, topic.c_str(), packNumber); 
+	_pcb->Publish(buf, s.c_str(), retained);
+}
+
 int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cmd)
 {
 	if(readNow > 0 && szResponse[0] != '\0')
 	{
-		logd("received: %d", readNow);
+		_root.clear();
+		JsonObject debug = _root.createNestedObject("debug");
+		debug["data"] = szResponse;
+		debug["received_size"] = readNow;
+		logd("received_size: %d", readNow);
 		logd("data: %s", szResponse);
         std::string chksum; 
         chksum.assign(&szResponse[readNow-4]);
@@ -166,10 +171,15 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 		for (int i = 1; i < readNow-4; i++) {
 			sum += szResponse[i];
 		}
+		bool checksumValid = true;
 		if (((CHKSUM+sum) & 0xFFFF) != 0) { 
 			uint16_t c = ~sum + 1;
 			loge("Checksum failed: %04x, should be: %04X", sum, c); 
-			return -1;
+			debug["Checksum failed"] = sum;
+			debug["Checksum should be"] = c;
+			// publish("debug", 0, false);
+			// return -1;
+			checksumValid = false;
 		} 
         std::string frame;
         frame.assign(&szResponse[1]); // skip SOI (~)
@@ -182,14 +192,51 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 		uint16_t LENGTH = toShort(index, v);
 		uint16_t LCHKSUM = LENGTH & 0xF000;
 		uint16_t LENID = LENGTH & 0x0FFF;
+		debug["ADR"] = ADR;
+		debug["CID1"] = CID1;
+		debug["CID2"] = CID2;
+		debug["LENID"] = LENID;
 		if (readNow < (LENID + 17)) {  
 			loge("Data length error LENGTH: %04X LENID: %04X, Received: %d", LENGTH, LENID, (readNow-17));
+			debug["Data length error"] = true;
+			publish("debug/Pack%d", ADR, false);
 			return -1;
 		}
 		logd("VER: %02X, ADR: %02X, CID1: %02X, CID2: %02X, LENID: %02X (%d), CHKSUM: %02X", VER, ADR, CID1, CID2, LENID, LENID, CHKSUM);
 		if (CID2 != ResponseCode::Normal) {
 			loge("CID2 error code: %02X", CID2);
+			debug["CID2 error code"] = CID2;
+			publish("debug/Pack%d", ADR, false);
 			return -1;
+		}
+		if (readNow == 139) {
+			if (!checksumValid) {
+				publish("debug", 0, false);
+				return -1;
+			}
+			cmd = CommandInformation::AnalogValueFixedPoint;
+			debug.remove("data");
+		}
+		else if (readNow == 93) {
+			if (!checksumValid) {
+				publish("debug", 0, false);
+				return -1;
+			}
+			cmd = CommandInformation::AlarmInfo;
+			debug.remove("data");
+		}
+		else if (readNow == 57) {
+			cmd = CommandInformation::GetVersionInfo;
+			debug.remove("data");
+		}
+		else if (readNow == 97) {
+			cmd = CommandInformation::GetBarCode;
+			debug.remove("data");
+		}
+		else {
+			debug["unrecognized message"] = readNow;
+			publish("debug/Pack%d", ADR, false);
+			cmd = CommandInformation::None;
 		}
 		switch (cmd) {
 			case CommandInformation::AnalogValueFixedPoint:
@@ -239,6 +286,7 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				_root["SOC"] = (remain * 100) / total;	
 				_root["Power"] = round(voltage * current);
 				// module["LAST"] = ((v[index++]<<8) | (v[index++]<<8) | v[index++]); 
+				publish("readings/Pack%d", ADR, false);
 			}
 			break;
 			case CommandInformation::GetVersionInfo: {
@@ -247,9 +295,11 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				std::string s(v.begin(), v.end());
 				ver = s.substr(index);
 				_root["Version"] = ver.substr(0, 19);
+				publish("info/Pack%d", ADR, true);
 				int packIndex = ADR - 1;
 				if (packIndex < _Packs.size()) {
 					_Packs[packIndex].setVersionInfo(ver);
+					_Packs[packIndex].SetInfoPublished();
 				}
 			}
 			break;
@@ -339,6 +389,8 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				aso["CHG_UT"] = CheckBit(AlarmSts2, 2);
 				aso["DSG_OT"] = CheckBit(AlarmSts2, 1);
 				aso["CHG_OT"] = CheckBit(AlarmSts2, 0);
+
+				publish("readings/Pack%d", ADR, false);
 			}
 			break;
 			case CommandInformation::GetBarCode: {
@@ -347,6 +399,7 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				bc = s.substr(index);
 				logi("GetBarCode for %d bc: %s", ADR, bc.c_str());
 				_root["BarCode"] = bc.substr(0, 15);
+				publish("info/Pack%d", ADR, true);
 				int packIndex = ADR - 1;
 				if (packIndex < _Packs.size()) {
 					_Packs[packIndex].setBarcode(bc);

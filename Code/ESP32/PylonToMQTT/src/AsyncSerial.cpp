@@ -51,7 +51,16 @@ void AsyncSerial::Receive(int timeOut)
 						_status = MESSAGE_RECEIVED;
 						_buffer[_bufferIndex] = 0;
 						if (_cbi != nullptr) _cbi->complete(); // call service function to handle payload
-						break;
+						if (_stream->available())
+						{
+							// TODO refactor to not report timeout after a first message has been successfully received, possibly disable timeout check for additional messages?
+							_status = RECEIVING_DATA;
+							SOIfound = false;
+						}
+						else
+						{
+							break;
+						}
 					}
 					else {
 						if (_bufferIndex >= _bufferLength) {
