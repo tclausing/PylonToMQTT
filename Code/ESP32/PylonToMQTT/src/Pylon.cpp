@@ -215,7 +215,7 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				return -1;
 			}
 			cmd = CommandInformation::AnalogValueFixedPoint;
-			debug.remove("data");
+			_root.remove("debug");
 		}
 		else if (readNow == 93) {
 			if (!checksumValid) {
@@ -223,7 +223,7 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				return -1;
 			}
 			cmd = CommandInformation::AlarmInfo;
-			debug.remove("data");
+			_root.remove("debug");
 		}
 		else if (readNow == 57) {
 			cmd = CommandInformation::GetVersionInfo;
@@ -304,93 +304,98 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 			}
 			break;
 			case CommandInformation::AlarmInfo: {
-                uint16_t INFO = toShort(index, v);
-				uint16_t packNumber = INFO & 0x00FF;
-				
-				JsonObject cells = _root.getMember("Cells");
-				logi("GetAlarm: Pack: %d", packNumber);
-				char key[16];
-				uint16_t numberOfCells = v[index++];
-				logd("number of cells: %d", numberOfCells );
-				for (int i = 0; i < numberOfCells; i++) {
-					sprintf(key, "Cell_%d", i+1);
-					JsonObject cell = cells.getMember(key);
-					cell["State"] = v[index++];  
-				}
-				JsonObject temps = _root.getMember("Temps");
-				uint16_t numberOfTemps = v[index++];
-				for (int i = 0; i < numberOfTemps; i++) {
-					if ( i < _TempKeys.size()) {
-						JsonObject entry = temps.getMember(_TempKeys[i]);
-						entry["State"] = v[index++]; 
+				try {
+					uint16_t INFO = toShort(index, v);
+					uint16_t packNumber = INFO & 0x00FF;
+					
+					JsonObject cells = _root.getMember("Cells");
+					logi("GetAlarm: Pack: %d", packNumber);
+					char key[16];
+					uint16_t numberOfCells = v[index++];
+					logd("number of cells: %d", numberOfCells );
+					for (int i = 0; i < numberOfCells; i++) {
+						sprintf(key, "Cell_%d", i+1);
+						JsonObject cell = cells.getMember(key);
+						cell["State"] = v[index++];  
 					}
+					JsonObject temps = _root.getMember("Temps");
+					uint16_t numberOfTemps = v[index++];
+					for (int i = 0; i < numberOfTemps; i++) {
+						if ( i < _TempKeys.size()) {
+							JsonObject entry = temps.getMember(_TempKeys[i]);
+							entry["State"] = v[index++]; 
+						}
+					}
+					index++; //skip 65
+					JsonObject entry = _root.getMember("PackCurrent");
+					entry["State"] = v[index++];
+					entry = _root.getMember("PackVoltage");
+					entry["State"] = v[index++];
+					uint8_t ProtectSts1 = v[index++];
+					uint8_t ProtectSts2 = v[index++];
+					uint8_t SystemSts = v[index++];
+					uint8_t FaultSts = v[index++];
+					index++; //skip 81
+					index++; //skip 83
+					uint8_t AlarmSts1 = v[index++];
+					uint8_t AlarmSts2 = v[index++];
+
+					JsonObject pso = _root.createNestedObject("Protect_Status");
+					pso["Charger_OVP"] = CheckBit(ProtectSts1, 7);
+					pso["SCP"] = CheckBit(ProtectSts1, 6);
+					pso["DSG_OCP"] = CheckBit(ProtectSts1, 5);
+					pso["CHG_OCP"] = CheckBit(ProtectSts1, 4);
+					pso["Pack_UVP"] = CheckBit(ProtectSts1, 3);
+					pso["Pack_OVP"] = CheckBit(ProtectSts1, 2);
+					pso["Cell_UVP"] = CheckBit(ProtectSts1, 1);
+					pso["Cell_OVP"] = CheckBit(ProtectSts1, 0);
+					pso["ENV_UTP"] = CheckBit(ProtectSts2, 6);
+					pso["ENV_OTP"] = CheckBit(ProtectSts2, 5);
+					pso["MOS_OTP"] = CheckBit(ProtectSts2, 4);
+					pso["DSG_UTP"] = CheckBit(ProtectSts2, 3);
+					pso["CHG_UTP"] = CheckBit(ProtectSts2, 2);
+					pso["DSG_OTP"] = CheckBit(ProtectSts2, 1);
+					pso["CHG_OTP"] = CheckBit(ProtectSts2, 0);
+
+					JsonObject sso = _root.createNestedObject("System_Status");
+					sso["Fully_Charged"] = CheckBit(ProtectSts2, 7);
+					sso["Heater"] = CheckBit(SystemSts, 7);
+					sso["AC_in"] = CheckBit(SystemSts, 5);
+					sso["Discharge_MOS"] = CheckBit(SystemSts, 2);
+					sso["Charge_MOS"] = CheckBit(SystemSts, 1);
+					sso["Charge_Limit"] = CheckBit(SystemSts, 0);
+					
+					JsonObject fso = _root.createNestedObject("Fault_Status");
+					fso["Heater_Fault"] = CheckBit(FaultSts, 7);
+					fso["CCB_Fault"] = CheckBit(FaultSts, 6);
+					fso["Sampling_Fault"] = CheckBit(FaultSts, 5);
+					fso["Cell_Fault"] = CheckBit(FaultSts, 4);
+					fso["NTC_Fault"] = CheckBit(FaultSts, 2);
+					fso["DSG_MOS_Fault"] = CheckBit(FaultSts, 1);
+					fso["CHG_MOS_Fault"] = CheckBit(FaultSts, 0);
+
+					JsonObject aso = _root.createNestedObject("Alarm_Status");
+					aso["DSG_OC"] = CheckBit(AlarmSts1, 5);
+					aso["CHG_OC"] = CheckBit(AlarmSts1, 4);
+					aso["Pack_UV"] = CheckBit(AlarmSts1, 3);
+					aso["Pack_OV"] = CheckBit(AlarmSts1, 2);
+					aso["Cell_UV"] = CheckBit(AlarmSts1, 1);
+					aso["Cell_OV"] = CheckBit(AlarmSts1, 0);
+
+					aso["SOC_Low"] = CheckBit(AlarmSts2, 7);
+					aso["MOS_OT"] = CheckBit(AlarmSts2, 6);
+					aso["ENV_UT"] = CheckBit(AlarmSts2, 5);
+					aso["ENV_OT"] = CheckBit(AlarmSts2, 4);
+					aso["DSG_UT"] = CheckBit(AlarmSts2, 3);
+					aso["CHG_UT"] = CheckBit(AlarmSts2, 2);
+					aso["DSG_OT"] = CheckBit(AlarmSts2, 1);
+					aso["CHG_OT"] = CheckBit(AlarmSts2, 0);
+
+					publish("alarms/Pack%d", ADR, false);
+				} catch (const std::exception& ex) {
+					_root["exception"] = ex.what();
+					publish("exception/Pack%d", ADR, false);
 				}
-				index++; //skip 65
-				JsonObject entry = _root.getMember("PackCurrent");
-				entry["State"] = v[index++];
-				entry = _root.getMember("PackVoltage");
-				entry["State"] = v[index++];
-				uint8_t ProtectSts1 = v[index++];
-				uint8_t ProtectSts2 = v[index++];
-				uint8_t SystemSts = v[index++];
-				uint8_t FaultSts = v[index++];
-				index++; //skip 81
-				index++; //skip 83
-				uint8_t AlarmSts1 = v[index++];
-				uint8_t AlarmSts2 = v[index++];
-
-				JsonObject pso = _root.createNestedObject("Protect_Status");
-				pso["Charger_OVP"] = CheckBit(ProtectSts1, 7);
-				pso["SCP"] = CheckBit(ProtectSts1, 6);
-				pso["DSG_OCP"] = CheckBit(ProtectSts1, 5);
-				pso["CHG_OCP"] = CheckBit(ProtectSts1, 4);
-				pso["Pack_UVP"] = CheckBit(ProtectSts1, 3);
-				pso["Pack_OVP"] = CheckBit(ProtectSts1, 2);
-				pso["Cell_UVP"] = CheckBit(ProtectSts1, 1);
-				pso["Cell_OVP"] = CheckBit(ProtectSts1, 0);
-				pso["ENV_UTP"] = CheckBit(ProtectSts2, 6);
-				pso["ENV_OTP"] = CheckBit(ProtectSts2, 5);
-				pso["MOS_OTP"] = CheckBit(ProtectSts2, 4);
-				pso["DSG_UTP"] = CheckBit(ProtectSts2, 3);
-				pso["CHG_UTP"] = CheckBit(ProtectSts2, 2);
-				pso["DSG_OTP"] = CheckBit(ProtectSts2, 1);
-				pso["CHG_OTP"] = CheckBit(ProtectSts2, 0);
-
-				JsonObject sso = _root.createNestedObject("System_Status");
-				sso["Fully_Charged"] = CheckBit(ProtectSts2, 7);
-				sso["Heater"] = CheckBit(SystemSts, 7);
-				sso["AC_in"] = CheckBit(SystemSts, 5);
-				sso["Discharge_MOS"] = CheckBit(SystemSts, 2);
-				sso["Charge_MOS"] = CheckBit(SystemSts, 1);
-				sso["Charge_Limit"] = CheckBit(SystemSts, 0);
-				
-				JsonObject fso = _root.createNestedObject("Fault_Status");
-				fso["Heater_Fault"] = CheckBit(FaultSts, 7);
-				fso["CCB_Fault"] = CheckBit(FaultSts, 6);
-				fso["Sampling_Fault"] = CheckBit(FaultSts, 5);
-				fso["Cell_Fault"] = CheckBit(FaultSts, 4);
-				fso["NTC_Fault"] = CheckBit(FaultSts, 2);
-				fso["DSG_MOS_Fault"] = CheckBit(FaultSts, 1);
-				fso["CHG_MOS_Fault"] = CheckBit(FaultSts, 0);
-
-				JsonObject aso = _root.createNestedObject("Alarm_Status");
-				aso["DSG_OC"] = CheckBit(AlarmSts1, 5);
-				aso["CHG_OC"] = CheckBit(AlarmSts1, 4);
-				aso["Pack_UV"] = CheckBit(AlarmSts1, 3);
-				aso["Pack_OV"] = CheckBit(AlarmSts1, 2);
-				aso["Cell_UV"] = CheckBit(AlarmSts1, 1);
-				aso["Cell_OV"] = CheckBit(AlarmSts1, 0);
-
-				aso["SOC_Low"] = CheckBit(AlarmSts2, 7);
-				aso["MOS_OT"] = CheckBit(AlarmSts2, 6);
-				aso["ENV_UT"] = CheckBit(AlarmSts2, 5);
-				aso["ENV_OT"] = CheckBit(AlarmSts2, 4);
-				aso["DSG_UT"] = CheckBit(AlarmSts2, 3);
-				aso["CHG_UT"] = CheckBit(AlarmSts2, 2);
-				aso["DSG_OT"] = CheckBit(AlarmSts2, 1);
-				aso["CHG_OT"] = CheckBit(AlarmSts2, 0);
-
-				publish("readings/Pack%d", ADR, false);
 			}
 			break;
 			case CommandInformation::GetBarCode: {
