@@ -192,7 +192,8 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 		uint16_t LENGTH = toShort(index, v);
 		uint16_t LCHKSUM = LENGTH & 0xF000;
 		uint16_t LENID = LENGTH & 0x0FFF;
-		debug["ADR"] = ADR;
+		_root["ADR"] = ADR;	// used as a tag in db
+		// debug["ADR"] = ADR;
 		debug["CID1"] = CID1;
 		debug["CID2"] = CID2;
 		debug["LENID"] = LENID;
@@ -244,23 +245,26 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				uint16_t INFO = toShort(index, v);
 				uint16_t packNumber = INFO & 0x00FF;
 				logi("AnalogValueFixedPoint: INFO: %04X, Pack: %d", INFO, packNumber);
-				JsonObject cells = _root.createNestedObject("Cells");
-				char key[16];
+				JsonArray cells = _root.createNestedArray("Cells");
+				// char key[16];
 				uint16_t numberOfCells = v[index++];
 				for (int i = 0; i < numberOfCells; i++) {
-					sprintf(key, "Cell_%d", i+1);
-					JsonObject cell = cells.createNestedObject(key);
+					// sprintf(key, "Cell_%d", i+1);
+					JsonObject cell = cells.createNestedObject();
 					cell["Reading"] = (toShort(index, v))/1000.0;
-					cell["State"] = 0xF0;
+					// cell["State"] = 0xF0;
+					cell["Num"] = i+1;	// used as a tag
 				}
-				JsonObject temps = _root.createNestedObject("Temps");
+				JsonArray temps = _root.createNestedArray("Temps");
 				uint16_t numberOfTemps = v[index++];
 				for (int i = 0; i < numberOfTemps; i++) {
 					if ( i < _TempKeys.size()) {
-						JsonObject entry = temps.createNestedObject(_TempKeys[i]);
+						JsonObject entry = temps.createNestedObject();
+						entry["Name"] = _TempKeys[i];
 						float kelvin = (toShort(index, v)) - 2730.0;// use 273.0 instead of 273.15 to match jakiper app
 						entry["Reading"] = round(kelvin)/10.0; // limit to one decimal place
-						entry["State"] = 0;  // default to ok
+						// entry["State"] = 0;  // default to ok
+						// entry["Num"] = i+1;	// used as a tag
 					}
 				}
 				int packIndex = ADR - 1;
@@ -272,11 +276,11 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 				JsonObject entry = _root.createNestedObject("PackCurrent");
 				float current = ((int16_t)toShort(index, v))/100.0;
 				entry["Reading"] = current;
-				entry["State"] = 0;  // default to ok
+				// entry["State"] = 0;  // default to ok
 				entry = _root.createNestedObject("PackVoltage");
 				float voltage = (toShort(index, v))/1000.0;
 				entry["Reading"] = voltage;
-				entry["State"] = 0;  // default to ok
+				// entry["State"] = 0;  // default to ok
 				int remain = toShort(index, v);
 				_root["RemainingCapacity"] = (remain/100.0);
 				index++; //skip user def code	
@@ -308,28 +312,30 @@ int Pylon::ParseResponse(char *szResponse, size_t readNow, CommandInformation cm
 					uint16_t INFO = toShort(index, v);
 					uint16_t packNumber = INFO & 0x00FF;
 					
-					JsonObject cells = _root.getMember("Cells");
+					JsonArray cells = _root.createNestedArray("Cells");
 					logi("GetAlarm: Pack: %d", packNumber);
-					char key[16];
+					// char key[16];
 					uint16_t numberOfCells = v[index++];
 					logd("number of cells: %d", numberOfCells );
 					for (int i = 0; i < numberOfCells; i++) {
-						sprintf(key, "Cell_%d", i+1);
-						JsonObject cell = cells.getMember(key);
-						cell["State"] = v[index++];  
+						// sprintf(key, "Cell_%d", i+1);
+						JsonObject cell = cells.createNestedObject();
+						cell["State"] = v[index++];
+						cell["Num"] = i+1;	// used as a tag
 					}
-					JsonObject temps = _root.getMember("Temps");
+					JsonArray temps = _root.createNestedArray("Temps");
 					uint16_t numberOfTemps = v[index++];
 					for (int i = 0; i < numberOfTemps; i++) {
 						if ( i < _TempKeys.size()) {
-							JsonObject entry = temps.getMember(_TempKeys[i]);
+							JsonObject entry = temps.createNestedObject();
+							entry["Name"] = _TempKeys[i];	// used as a tag
 							entry["State"] = v[index++]; 
 						}
 					}
 					index++; //skip 65
-					JsonObject entry = _root.getMember("PackCurrent");
+					JsonObject entry = _root.createNestedObject("PackCurrent");
 					entry["State"] = v[index++];
-					entry = _root.getMember("PackVoltage");
+					entry = _root.createNestedObject("PackVoltage");
 					entry["State"] = v[index++];
 					uint8_t ProtectSts1 = v[index++];
 					uint8_t ProtectSts2 = v[index++];
