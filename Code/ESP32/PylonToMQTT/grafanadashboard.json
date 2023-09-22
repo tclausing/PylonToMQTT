@@ -1,0 +1,659 @@
+{
+    "annotations": {
+      "list": [
+        {
+          "builtIn": 1,
+          "datasource": {
+            "type": "datasource",
+            "uid": "grafana"
+          },
+          "enable": true,
+          "hide": true,
+          "iconColor": "rgba(0, 211, 255, 1)",
+          "name": "Annotations & Alerts",
+          "target": {
+            "limit": 100,
+            "matchAny": false,
+            "tags": [],
+            "type": "dashboard"
+          },
+          "type": "dashboard"
+        }
+      ]
+    },
+    "editable": true,
+    "fiscalYearStartMonth": 0,
+    "graphTooltip": 0,
+    "id": 4,
+    "links": [],
+    "liveNow": false,
+    "panels": [
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineStyle": {
+                "fill": "solid"
+              },
+              "lineWidth": 2,
+              "pointSize": 1,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": true,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "area"
+              }
+            },
+            "decimals": 2,
+            "displayName": "${__field.name}",
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "red",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 2.5
+                },
+                {
+                  "color": "transparent",
+                  "value": 2.8
+                },
+                {
+                  "color": "orange",
+                  "value": 3.6
+                },
+                {
+                  "color": "#E24D42",
+                  "value": 3.7
+                }
+              ]
+            },
+            "unit": "volt"
+          },
+          "overrides": [
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "SOC"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "percent"
+                },
+                {
+                  "id": "decimals",
+                  "value": 0
+                },
+                {
+                  "id": "min",
+                  "value": 0
+                },
+                {
+                  "id": "max",
+                  "value": 100
+                },
+                {
+                  "id": "custom.thresholdsStyle",
+                  "value": {
+                    "mode": "off"
+                  }
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "super-light-green",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "right"
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byType",
+                "options": "boolean"
+              },
+              "properties": [
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "red",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "custom.thresholdsStyle",
+                  "value": {
+                    "mode": "off"
+                  }
+                },
+                {
+                  "id": "custom.fillOpacity",
+                  "value": 3
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "spread"
+              },
+              "properties": [
+                {
+                  "id": "decimals"
+                },
+                {
+                  "id": "min",
+                  "value": 0
+                },
+                {
+                  "id": "max",
+                  "value": 4
+                },
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "hidden"
+                },
+                {
+                  "id": "custom.thresholdsStyle",
+                  "value": {
+                    "mode": "off"
+                  }
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "fixedColor": "text",
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "custom.lineWidth",
+                  "value": 0.5
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byRegexp",
+                "options": "/.* Status/"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "none"
+                },
+                {
+                  "id": "max",
+                  "value": 18
+                },
+                {
+                  "id": "custom.thresholdsStyle",
+                  "value": {
+                    "mode": "off"
+                  }
+                },
+                {
+                  "id": "min",
+                  "value": -1
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "fixed"
+                  }
+                },
+                {
+                  "id": "custom.lineWidth",
+                  "value": 0.5
+                }
+              ]
+            },
+            {
+              "matcher": {
+                "id": "byName",
+                "options": "PackCurrent"
+              },
+              "properties": [
+                {
+                  "id": "unit",
+                  "value": "amp"
+                },
+                {
+                  "id": "custom.lineWidth",
+                  "value": 0.5
+                },
+                {
+                  "id": "custom.thresholdsStyle",
+                  "value": {
+                    "mode": "off"
+                  }
+                },
+                {
+                  "id": "thresholds",
+                  "value": {
+                    "mode": "absolute",
+                    "steps": [
+                      {
+                        "color": "text",
+                        "value": null
+                      },
+                      {
+                        "color": "green",
+                        "value": 0
+                      }
+                    ]
+                  }
+                },
+                {
+                  "id": "custom.gradientMode",
+                  "value": "scheme"
+                },
+                {
+                  "id": "color",
+                  "value": {
+                    "mode": "thresholds"
+                  }
+                },
+                {
+                  "id": "min",
+                  "value": -200
+                },
+                {
+                  "id": "custom.axisPlacement",
+                  "value": "hidden"
+                },
+                {
+                  "id": "decimals",
+                  "value": 0
+                }
+              ]
+            }
+          ]
+        },
+        "gridPos": {
+          "h": 15,
+          "w": 24,
+          "x": 0,
+          "y": 0
+        },
+        "id": 2,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "bottom",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "pluginVersion": "10.1.0",
+        "targets": [
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+            },
+            "hide": false,
+            "query": "import \"strings\"\r\n\r\nvalues = from(bucket: \"pylontomqtt\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._field == \"CellVoltage\" and r.pack == \"$pack\")\r\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\r\n  |> map(fn: (r) => ({ \r\n      _field: if strings.strlen(v: r.cell) > 1 then r.cell else \"0${r.cell}\", \r\n      _time: r._time, _value: r._value }))\r\n  |> yield(name: \"mean\")\r\n\r\n//values\r\n//  |> map(fn: (r) => ({ r with _field: \"spread\" }))\r\n//  |> aggregateWindow(every: v.windowPeriod, fn: spread, createEmpty: false)\r\n//  |> yield(name: \"spread\")",
+            "refId": "A"
+          },
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+            },
+            "hide": false,
+            "query": "from(bucket: \"pylontomqtt\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r.pack == \"$pack\" and (\r\n    r._field == \"SOC\" \r\n    //or r._field == \"PackCurrent\"\r\n    ))\r\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)",
+            "refId": "B"
+          },
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+            },
+            "hide": false,
+            "query": "import \"strings\"\r\nimport \"regexp\"\r\n\r\nfrom(bucket: \"pylontomqtt\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r.pack == \"$pack\"\r\n      and r._value == true\r\n      and (r._measurement == \"ProtectStatus\"\r\n        or r._measurement == \"FaultStatus\"\r\n        or r._measurement == \"AlarmStatus\")\r\n      )",
+            "refId": "C"
+          },
+          {
+            "datasource": {
+              "type": "influxdb",
+              "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+            },
+            "hide": false,
+            "query": "import \"strings\"\r\n\r\nfrom(bucket: \"pylontomqtt\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r._field == \"CellState\" and r.pack == \"$pack\")\r\n  |> filter(fn: (r) => r._value != \"0\")\r\n  |> map(fn: (r) => ({ r with \r\n      _field: (if strings.strlen(v: r.cell) > 1 then r.cell else \"0${r.cell}\") + \" Status \" + r._value, \r\n      _value: int(v: r.cell) }))",
+            "refId": "D"
+          }
+        ],
+        "transformations": [],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "axisCenteredZero": false,
+              "axisColorMode": "text",
+              "axisLabel": "",
+              "axisPlacement": "auto",
+              "barAlignment": 0,
+              "drawStyle": "line",
+              "fillOpacity": 0,
+              "gradientMode": "none",
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "viz": false
+              },
+              "insertNulls": false,
+              "lineInterpolation": "linear",
+              "lineWidth": 1,
+              "pointSize": 5,
+              "scaleDistribution": {
+                "type": "linear"
+              },
+              "showPoints": "auto",
+              "spanNulls": true,
+              "stacking": {
+                "group": "A",
+                "mode": "none"
+              },
+              "thresholdsStyle": {
+                "mode": "off"
+              }
+            },
+            "displayName": "${__field.name}",
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            },
+            "unit": "celsius"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 20,
+          "x": 0,
+          "y": 15
+        },
+        "id": 19,
+        "options": {
+          "legend": {
+            "calcs": [],
+            "displayMode": "list",
+            "placement": "right",
+            "showLegend": true
+          },
+          "tooltip": {
+            "mode": "single",
+            "sort": "none"
+          }
+        },
+        "targets": [
+          {
+            "alias": "cell temp 1",
+            "datasource": {
+              "type": "influxdb",
+              "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+            },
+            "groupBy": [
+              {
+                "params": [
+                  "$__interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "mqtt_consumer",
+            "orderByTime": "ASC",
+            "policy": "autogen",
+            "query": "from(bucket: \"pylontomqtt\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"Temp\" and r.pack == \"$pack\")\r\n  |> aggregateWindow(every: v.windowPeriod, fn: mean, createEmpty: false)\r\n  |> map(fn: (r) => ({ r with \"_field\": \"Pack \" + r.pack + \" \" + r.sensor }))",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "Temps_CellTemp1_4_Reading"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [
+              {
+                "key": "topic",
+                "operator": "=",
+                "value": "PylonToMQTT/jakiper/stat/readings/Pack3"
+              }
+            ]
+          }
+        ],
+        "title": "Temps",
+        "transformations": [],
+        "type": "timeseries"
+      },
+      {
+        "datasource": {
+          "type": "influxdb",
+          "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+        },
+        "description": "",
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "fixedColor": "green",
+              "mode": "fixed"
+            },
+            "displayName": "${__field.name}",
+            "mappings": [],
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                }
+              ]
+            },
+            "unit": "none"
+          },
+          "overrides": []
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 4,
+          "x": 20,
+          "y": 15
+        },
+        "id": 22,
+        "options": {
+          "colorMode": "value",
+          "graphMode": "area",
+          "justifyMode": "auto",
+          "orientation": "auto",
+          "reduceOptions": {
+            "calcs": [],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "auto"
+        },
+        "pluginVersion": "10.1.0",
+        "targets": [
+          {
+            "alias": "cycle count ",
+            "datasource": {
+              "type": "influxdb",
+              "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+            },
+            "groupBy": [
+              {
+                "params": [
+                  "$__interval"
+                ],
+                "type": "time"
+              },
+              {
+                "params": [
+                  "null"
+                ],
+                "type": "fill"
+              }
+            ],
+            "measurement": "mqtt_consumer",
+            "orderByTime": "ASC",
+            "policy": "autogen",
+            "query": "from(bucket: \"pylontomqtt\")\r\n  |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\r\n  |> filter(fn: (r) => r[\"_field\"] == \"CycleCount\")\r\n  |> last()\r\n  |> map(fn: (r) => ({ r with \"_field\": \"Pack \" + r.pack}))",
+            "refId": "A",
+            "resultFormat": "time_series",
+            "select": [
+              [
+                {
+                  "params": [
+                    "CycleCount"
+                  ],
+                  "type": "field"
+                },
+                {
+                  "params": [],
+                  "type": "mean"
+                }
+              ]
+            ],
+            "tags": [
+              {
+                "key": "topic",
+                "operator": "=",
+                "value": "PylonToMQTT/jakiper/stat/readings/Pack1"
+              }
+            ]
+          }
+        ],
+        "title": "Cycles",
+        "type": "stat"
+      }
+    ],
+    "refresh": "1m",
+    "schemaVersion": 38,
+    "style": "dark",
+    "tags": [],
+    "templating": {
+      "list": [
+        {
+          "current": {
+            "selected": true,
+            "text": "1",
+            "value": "1"
+          },
+          "datasource": {
+            "type": "influxdb",
+            "uid": "ca19a547-b123-46eb-bbe5-619942859ca8"
+          },
+          "definition": "import \"influxdata/influxdb/schema\"\r\nschema.tagValues(bucket: \"pylontomqtt\", tag: \"pack\")",
+          "hide": 0,
+          "includeAll": false,
+          "label": "Pack",
+          "multi": false,
+          "name": "pack",
+          "options": [],
+          "query": "import \"influxdata/influxdb/schema\"\r\nschema.tagValues(bucket: \"pylontomqtt\", tag: \"pack\")",
+          "refresh": 1,
+          "regex": "",
+          "skipUrlSync": false,
+          "sort": 0,
+          "type": "query"
+        }
+      ]
+    },
+    "time": {
+      "from": "now-12h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "timezone": "",
+    "title": "Jakiper Battery",
+    "uid": "cLhs-PkRk",
+    "version": 28,
+    "weekStart": ""
+  }
